@@ -8,9 +8,14 @@ import (
 	"net"
 	"io"
 	"bufio"
+	"sync"
+	"os/signal"
+	"golang.org/x/net/netutil"
 )
 
 const versionNumber = "1.0.0#20180606"
+
+var wg = sync.WaitGroup{}
 
 func main() {
 	version := flag.Bool("version", false, "Show program's version number and exit")
@@ -44,6 +49,11 @@ func main() {
 }
 
 func listenS(addr string, port int) {
+
+	defer wg.Done()
+	stopChan := make(chan os.Signal) // 接收系统中断信号
+	signal.Notify(stopChan, os.Interrupt)
+
 	if addr == "" {
 		addr = "localhost"
 	}
@@ -52,6 +62,8 @@ func listenS(addr string, port int) {
 		log.Fatal(err)
 		os.Exit(1)
 	}
+	defer listener.Close()
+	listener = netutil.LimitListener(listener, 1)
 
 	allClients := make(map[net.Conn]int)
 	newConnections := make(chan net.Conn)
@@ -60,12 +72,35 @@ func listenS(addr string, port int) {
 	outMessages := make(chan string)
 
 	go func() {
+		<-stopChan
+		for c := range allClients {
+			delete(allClients, c)
+			c.Close()
+		}
+		if err = listener.Close(); err != nil {
+			fmt.Print(err)
+			os.Exit(1)
+		}
+		os.Exit(0)
+	}()
+
+	go func() {
 		for {
 			conn, err := listener.Accept()
 			if err != nil {
-				fmt.Println(err)
+				/*if err == io.EOF {
+					fmt.Print("eofff")
+					return
+				}
+				if strings.Contains(err.Error(), "use of closed network connection") {
+					fmt.Print("ddd")
+					listener.Close()
+					break
+				}*/
+				fmt.Println("acc")
 				os.Exit(1)
 			}
+			wg.Add(1)
 			newConnections <- conn
 		}
 	}()
@@ -90,6 +125,14 @@ func listenS(addr string, port int) {
 				for {
 					message, err := reader.ReadString('\n')
 					if err != nil {
+						if err != io.EOF {
+							log.Print("err")
+							log.Print(err)
+						}else if err == io.EOF {
+							//  关闭连接
+							log.Print("eof")
+							os.Exit(0)
+						}
 						break
 					}
 					inMessages <- message
@@ -103,6 +146,8 @@ func listenS(addr string, port int) {
 				go func(c net.Conn) {
 					_, err := c.Write([]byte(message))
 					if err != nil {
+						log.Print("close")
+						log.Print(err)
 						deadConnections <- c
 					}
 				}(c)
@@ -113,15 +158,28 @@ func listenS(addr string, port int) {
 		}
 	}
 
+	wg.Wait()
 
 }
 
 func connectS(addr string, port int, html bool) {
+
+	stopChan := make(chan os.Signal) // 接收系统中断信号
+	signal.Notify(stopChan, os.Interrupt)
+
 	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", addr, port))
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer conn.Close()
+	//defer conn.Close()
+	go func() {
+		<-stopChan
+		if err = conn.Close(); err != nil {
+			log.Print(err)
+			os.Exit(1)
+		}
+		os.Exit(0)
+	}()
 	if html {
 		fmt.Fprintf(conn, "GET / HTTP/1.0\r\n\r\n")
 		io.Copy(os.Stdout, conn)
@@ -136,3 +194,4 @@ func tran(dst io.Writer, src io.Reader) {
 		log.Fatal(err)
 	}
 }
+
