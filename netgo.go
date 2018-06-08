@@ -11,6 +11,7 @@ import (
 	"sync"
 	"os/signal"
 	"golang.org/x/net/netutil"
+	"os/exec"
 )
 
 const versionNumber = "1.0.0#20180606"
@@ -22,7 +23,8 @@ func main() {
 	listen := flag.Bool("l", false, "Listening on the server")
 	addr := flag.String("a", "", "Address to use")
 	port := flag.Int("p", 0, "Port to use ")
-	html := flag.Bool("html", false, "Send html request of GET")
+	htmlFlag := flag.Bool("html", false, "Send html request of GET")
+	exeCmd := flag.String("e", "", "")
 	help := flag.Bool("h", false, "Show usage")
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage:\n  %s [Options]\n\nOptions\n", os.Args[0])
@@ -41,14 +43,14 @@ func main() {
 	}
 
 	if *listen {
-		listenS(*addr, *port)
+		listenS(*addr, *port, *exeCmd)
 	}else {
-		connectS(*addr, *port, *html)
+		connectS(*addr, *port, *htmlFlag, *exeCmd)
 	}
 
 }
 
-func listenS(addr string, port int) {
+func listenS(addr string, port int, exeCmd string) {
 
 	defer wg.Done()
 	stopChan := make(chan os.Signal) // 接收系统中断信号
@@ -88,15 +90,6 @@ func listenS(addr string, port int) {
 		for {
 			conn, err := listener.Accept()
 			if err != nil {
-				/*if err == io.EOF {
-					fmt.Print("eofff")
-					return
-				}
-				if strings.Contains(err.Error(), "use of closed network connection") {
-					fmt.Print("ddd")
-					listener.Close()
-					break
-				}*/
 				fmt.Println("acc")
 				os.Exit(1)
 			}
@@ -162,7 +155,7 @@ func listenS(addr string, port int) {
 
 }
 
-func connectS(addr string, port int, html bool) {
+func connectS(addr string, port int, htmlFlag bool, exeCmd string) {
 
 	stopChan := make(chan os.Signal) // 接收系统中断信号
 	signal.Notify(stopChan, os.Interrupt)
@@ -180,11 +173,44 @@ func connectS(addr string, port int, html bool) {
 		}
 		os.Exit(0)
 	}()
-	if html {
+
+	if htmlFlag {
 		fmt.Fprintf(conn, "GET / HTTP/1.0\r\n\r\n")
 		io.Copy(os.Stdout, conn)
 		return
+	}else if exeCmd != ""{
+		cmd := exec.Command(exeCmd)
+
+		//创建获取命令输出管道
+		stdout, err := cmd.StdoutPipe()
+		if err != nil {
+			log.Printf("Error:can not obtain stdout pipe for command:%s\n", err)
+			return
+		}
+		stdin, err := cmd.StdinPipe()
+		if err != nil {
+			log.Printf("Error:can not obtain stdout pipe for command:%s\n", err)
+			return
+		}
+
+		go tran(conn, stdout)
+		go tran(stdin, conn)
+
+		//执行命令
+		if err := cmd.Start(); err != nil {
+			log.Println("Error:The command is err,", err)
+			return
+		}
+
+		//wait 方法会一直阻塞到其所属的命令完全运行结束为止
+		if err := cmd.Wait(); err != nil {
+			fmt.Println("wait:", err.Error())
+			return
+		}
+
+		return
 	}
+
 	go tran(os.Stdout, conn)
 	tran(conn, os.Stdin)
 }
