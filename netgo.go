@@ -11,17 +11,17 @@ import (
 	"github.com/grt1st/netgo/netextends"
 )
 
-const versionNumber = "1.0.0#20180606"
+const versionNumber = "1.1.0#20180610"
 
 
 func main() {
 	version := flag.Bool("version", false, "Show program's version number and exit")
-	listen := flag.Bool("l", false, "Listening on the server")
+	listen := flag.Bool("l", false, "Listen on the server")
 	addr := flag.String("a", "", "Address to use")
 	port := flag.Int("p", 0, "Port to use ")
-	port1 := flag.Int("rp", 0, "Port to use ")
-	htmlFlag := flag.Bool("html", false, "Send html request of GET")
-	exeCmd := flag.String("e", "", "Use pip to transform command")
+	port1 := flag.Int("rp", 0, "Another port to use ")
+	htmlFlag := flag.Bool("html", false, "Send http request of GET")
+	exeCmd := flag.String("e", "", "Use pipe to transform command")
 	//max := flag.Int("m", 1, "Max client num")
 	rhost := flag.String("rhost", "", "The remote address to connect")
 	help := flag.Bool("h", false, "Show usage")
@@ -36,7 +36,7 @@ func main() {
 		fmt.Println(versionNumber)
 		return
 	}
-	if *help || *port == 0 || (*addr == "" && *listen == false &&  *lhost == ""){
+	if *help || *port == 0 || (*addr == "" && *listen == false &&  *rhost == ""){
 		flag.Usage()
 		return
 	}
