@@ -36,8 +36,11 @@ func ConnectExecMode(conn net.Conn, exeCmd string) {
 		os.Exit(1)
 	}
 
+	go func() {
+		utils.Transform(stdin, conn)
+		os.Exit(0)
+	}()
 	go utils.Transform(conn, stdout)
-	go utils.Transform(stdin, conn)
 
 	//执行命令
 	if err := cmd.Start(); err != nil {
@@ -59,3 +62,4 @@ func ConnectHtmlMode(conn net.Conn) {
 	fmt.Fprintf(conn, "GET / HTTP/1.0\r\n\r\n")
 	io.Copy(os.Stdout, conn)
 }
+

@@ -118,8 +118,11 @@ func ListenExecMode(listener net.Listener, exeCmd string) {
 					os.Exit(1)
 				}
 
+				go func() {
+					utils.Transform(stdin, conn)
+					os.Exit(0)
+				}()
 				go utils.Transform(conn, stdout)
-				go utils.Transform(stdin, conn)
 
 				//执行命令
 				if err := cmd.Start(); err != nil {
@@ -138,3 +141,4 @@ func ListenExecMode(listener net.Listener, exeCmd string) {
 		}
 	}
 }
+

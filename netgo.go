@@ -19,8 +19,11 @@ func main() {
 	listen := flag.Bool("l", false, "Listening on the server")
 	addr := flag.String("a", "", "Address to use")
 	port := flag.Int("p", 0, "Port to use ")
+	port1 := flag.Int("rp", 0, "Port to use ")
 	htmlFlag := flag.Bool("html", false, "Send html request of GET")
-	exeCmd := flag.String("e", "", "")
+	exeCmd := flag.String("e", "", "Use pip to transform command")
+	//max := flag.Int("m", 1, "Max client num")
+	rhost := flag.String("rhost", "", "The remote address to connect")
 	help := flag.Bool("h", false, "Show usage")
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage:\n  %s [Options]\n\nOptions\n", os.Args[0])
@@ -33,15 +36,23 @@ func main() {
 		fmt.Println(versionNumber)
 		return
 	}
-	if *help || *port == 0 || (*addr == "" && *listen == false) {
+	if *help || *port == 0 || (*addr == "" && *listen == false &&  *lhost == ""){
 		flag.Usage()
 		return
 	}
 
 	if *listen {
-		listenE(*addr, *port, *exeCmd)
+		if *port1 == 0 {
+			listenE(*addr, *port, *exeCmd)
+		}else {
+			netextends.ServerAndServer(*addr, *port, *port1)
+		}
 	}else {
-		connectS(*addr, *port, *htmlFlag, *exeCmd)
+		if *rhost != "" {
+			netextends.RemotePortForward(*addr, *port, *rhost)
+		}else {
+			connectS(*addr, *port, *htmlFlag, *exeCmd)
+		}
 	}
 
 }
