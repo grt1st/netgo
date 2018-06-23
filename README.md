@@ -14,6 +14,7 @@ Install go first.
 
 After you install go and config it well:
 ```
+go get github.com/grt1st/netgo
 go build github.com/grt1st/netgo
 ./netgo
 ```
